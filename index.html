@@ -11,7 +11,7 @@
 .log-entry p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}
 .log-entry button{margin:5px 8px 0 0}
 .log-status{font-size:13px;color:#a9c5d8;margin-top:10px;min-height:18px}
-.log-status.error{color:#ffb6a7}
+.log-status.error{color:#ffb6a7}.prescribed{white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}.log-entry-title{font-size:17px;font-weight:750;margin-bottom:4px}.log-entry-summary{font-size:13px;color:#a1b5c5}.log-link{margin-top:14px}.logged-note{color:#a9e3ff;font-size:13px;margin:8px 0}
 </style>
 </head><body><div class="shell"><header class="top"><div class="brand"><div class="mark">XV</div><div><b>CITYFIT</b><div class="sub">STRONGER TOGETHER · EST. 2012</div></div></div><span class="pill" id="seasonBadge">2027 PROGRAM</span></header><div id="notice" class="banner hide"></div><main id="main"><div class="card"><h2>Loading CityFit workouts…</h2><p>If this message remains, the app could not start.</p></div></main><footer class="footer">CityFit Gear · <a href="https://oosiris-shop.fourthwall.com/collections/cityfit" target="_blank" rel="noopener">Shop the collection ↗</a><div style="margin-top:12px"><a href="install.html">Install CityFit on your phone ↗</a></div><div style="margin-top:12px"><a href="https://docs.google.com/forms/d/e/1FAIpQLSdrHEsSSdsyLr4JW2494ZD4NqbKKiAtONmNJ8YmZR-3NZncGA/viewform" target="_blank" rel="noopener noreferrer">Send Feedback ↗</a></div></footer></div><nav class="nav"><div class="navinner"><button data-tab="today" class="selected"><span class="ico">◉</span>Today</button><button data-tab="calendar"><span class="ico">▦</span>Calendar</button><button data-tab="log"><span class="ico">▤</span>My Log</button></div></nav><script>
 'use strict';
@@ -31,7 +31,7 @@ function todayKey(){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Ameri
 function monday(key){return plus(key,-((weekday(key)+6)%7))};
 function showNotice(message){$('#notice').textContent=message;$('#notice').classList.remove('hide')};
 function render(){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));$('#seasonBadge').textContent=season(selected);if(tab==='today')renderToday();else if(tab==='calendar')renderCalendar();else renderLog()};
-function renderToday(){let m=monday(selected);let days=[0,1,2,3,4].map(i=>plus(m,i));let w=workouts[selected];let wed=weekday(selected)===3;let inRange=selected>=START&&selected<=END;$('#main').innerHTML=`<div class="headrow"><div><div class="eyebrow">${escape(pretty(selected))}</div><h1>Workout of the Day</h1></div><button class="btn secondary" id="goToday">Today</button></div><div class="daynav">${days.map(k=>`<button class="day ${k===selected?'active':''}" data-date="${k}"><small>${escape(pretty(k,{weekday:'short'}))}</small>${Number(k.slice(8))}</button>`).join('')}</div>${!inRange?'<div class="banner">Outside the 2027 programming year. Choose a date from November 2, 2026 through October 29, 2027.</div>':''}<div class="card">${w?`<div class="eyebrow">${escape(season(selected))}</div><h2>${escape(w.focus||'Workout')}</h2>${wed?'':`<div class="meta">Leading today’s workout is <strong>${escape(lead(selected))}</strong>${w.source?`<br>Workout source: <strong>${escape(w.source)}</strong>`:''}</div>`}<div class="sectionline"></div>${w.phase?`<div class="meta">Phase: <strong>${escape(w.phase)}</strong></div>`:''}<div class="workout">${escape(w.description||'')}</div>${w.benchGroups?.length?`<div class="sectionline"></div><h2>Bench training weights</h2><div class="weightgrid">${w.benchGroups.map(g=>`<div class="weight"><b>${escape(g.name)}</b><span>${escape(g.weight)}</span></div>`).join('')}</div>`:''}`:`<div class="empty"><h2>${weekday(selected)===0||weekday(selected)===6?'Rest day':'Workout not loaded'}</h2>${live?'No workout found for this date.':'Connect your CityFit Google Sheet to load the complete program.'}</div>`}</div><div class="headrow"><button class="btn secondary" id="prevDay">← Previous</button><button class="btn secondary" id="nextDay">Next →</button></div>`;$('#goToday').onclick=()=>{selected=todayKey();month=selected.slice(0,7);render()};$('#prevDay').onclick=()=>{selected=plus(selected,-1);render()};$('#nextDay').onclick=()=>{selected=plus(selected,1);render()};document.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{selected=b.dataset.date;render()})};
+function renderToday(){let m=monday(selected);let days=[0,1,2,3,4].map(i=>plus(m,i));let w=workouts[selected];let wed=weekday(selected)===3;let inRange=selected>=START&&selected<=END;$('#main').innerHTML=`<div class="headrow"><div><div class="eyebrow">${escape(pretty(selected))}</div><h1>Workout of the Day</h1></div><button class="btn secondary" id="goToday">Today</button></div><div class="daynav">${days.map(k=>`<button class="day ${k===selected?'active':''}" data-date="${k}"><small>${escape(pretty(k,{weekday:'short'}))}</small>${Number(k.slice(8))}</button>`).join('')}</div>${!inRange?'<div class="banner">Outside the 2027 programming year. Choose a date from November 2, 2026 through October 29, 2027.</div>':''}<div class="card">${w?`<div class="eyebrow">${escape(season(selected))}</div><h2>${escape(w.focus||'Workout')}</h2>${wed?'':`<div class="meta">Leading today’s workout is <strong>${escape(lead(selected))}</strong>${w.source?`<br>Workout source: <strong>${escape(w.source)}</strong>`:''}</div>`}<div class="sectionline"></div>${w.phase?`<div class="meta">Phase: <strong>${escape(w.phase)}</strong></div>`:''}<div class="workout">${escape(w.description||'')}</div>${w.benchGroups?.length?`<div class="sectionline"></div><h2>Bench training weights</h2><div class="weightgrid">${w.benchGroups.map(g=>`<div class="weight"><b>${escape(g.name)}</b><span>${escape(g.weight)}</span></div>`).join('')}</div>`:''}`:`<div class="empty"><h2>${weekday(selected)===0||weekday(selected)===6?'Rest day':'Workout not loaded'}</h2>${live?'No workout found for this date.':'Connect your CityFit Google Sheet to load the complete program.'}</div>`}</div><div id="workoutLogLink" class="log-link"></div><div class="headrow"><button class="btn secondary" id="prevDay">← Previous</button><button class="btn secondary" id="nextDay">Next →</button></div>`;if(window.cityfitUpdateTodayLog)window.cityfitUpdateTodayLog();$('#goToday').onclick=()=>{selected=todayKey();month=selected.slice(0,7);render()};$('#prevDay').onclick=()=>{selected=plus(selected,-1);render()};$('#nextDay').onclick=()=>{selected=plus(selected,1);render()};document.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{selected=b.dataset.date;render()})};
 function renderCalendar(){let [y,mo]=month.split('-').map(Number);let first=`${month}-01`;let start=plus(first,-weekday(first));let cells=Array.from({length:42},(_,i)=>plus(start,i));$('#main').innerHTML=`<div class="eyebrow">2027 Annual Programming</div><h1>Workout Calendar</h1><div class="calheader"><button id="monthPrev">←</button><h2>${escape(pretty(first,{month:'long',year:'numeric'}))}</h2><button id="monthNext">→</button></div><div class="calendar">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=>`<div class="calday">${x}</div>`).join('')}${cells.map(k=>`<button class="date ${k.slice(0,7)!==month?'other':''} ${k===selected?'selected':''} ${k===todayKey()?'today':''}" data-pick="${k}"><span>${Number(k.slice(8))}</span><small>${workouts[k]?escape((workouts[k].focus||'Workout').replace('Bench Press','Bench')):''}</small></button>`).join('')}</div><div class="card"><div class="meta">Select any date to open its workout. Browse the complete CityFit programming year.</div></div>`;$('#monthPrev').onclick=()=>{month=plus(first,-1).slice(0,7);render()};$('#monthNext').onclick=()=>{month=plus(`${month}-${new Date(Date.UTC(y,mo,0)).getUTCDate()}`,1).slice(0,7);render()};document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{selected=b.dataset.pick;tab='today';render()})};
 function renderLog(){if(window.cityfitRenderLog){window.cityfitRenderLog();return;}$('#main').innerHTML='<div class="card"><h2>Loading personal workout log…</h2></div>'};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
@@ -61,10 +61,15 @@ let user = null;
 let entries = [];
 let loading = false;
 let editingDate = null;
+let visibleCount = 10;
+let logDate = null;
 let status = '';
 let statusError = false;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const logRoot = () => document.querySelector('#main');
+const chosenDate = () => logDate || ((selected>=START&&selected<=END)?selected:todayKey());
+const programFor = date => workouts[date] || null;
+const workoutName = date => programFor(date)?.focus || 'Workout';
 const logCollection = () => collection(db, 'users', user.uid, 'workouts');
 const logDoc = date => doc(db, 'users', user.uid, 'workouts', date);
 const isDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value+'T12:00:00Z'));
@@ -81,18 +86,30 @@ const errorText = e => {
 async function fetchLogs(){
   if(!user)return;
   loading=true;if(logActive())renderLog();
+  const requestingUid=user.uid;
   try{
     const snapshot=await getDocs(logCollection());
+    if(!user||user.uid!==requestingUid)return;
     entries=snapshot.docs.map(s=>({id:s.id,...s.data()})).sort((a,b)=>b.id.localeCompare(a.id));
     showStatus('');
-  }catch(e){entries=[];showStatus(errorText(e),true)}
-  finally{loading=false;if(logActive())renderLog()}
+  }catch(e){if(user&&user.uid===requestingUid){entries=[];showStatus(errorText(e),true)}}
+  finally{loading=false;if(logActive())renderLog();if(window.cityfitUpdateTodayLog)window.cityfitUpdateTodayLog()}
 }
 function entryForm(){
-  const date=editingDate || ((selected>=START&&selected<=END)?selected:todayKey());
+  const date=editingDate || chosenDate();
+  const program=programFor(date);
   const existing=entries.find(e=>e.id===date)||{};
   return `<div class="card">
     <h2>${existing.date?'Edit workout':'Log a workout'}</h2>
+    <div class="sectionline"></div>
+    <div class="eyebrow">Scheduled workout · ${esc(pretty(date))}</div>
+    ${program?`<h2>${esc(program.focus||'Workout')}</h2>
+      ${program.phase?`<div class="meta">Phase: <strong>${esc(program.phase)}</strong></div>`:''}
+      <div class="prescribed">${esc(program.description||'')}</div>
+      ${program.benchGroups?.length?`<div class="sectionline"></div><div class="weightgrid">${program.benchGroups.map(g=>`<div class="weight"><b>${esc(g.name)}</b><span>${esc(g.weight)}</span></div>`).join('')}</div>`:''}`:
+      '<p class="muted">No scheduled workout is available for this date. You can still record a personal workout.</p>'}
+    <div class="sectionline"></div>
+    <h2>My results</h2>
     <form id="workoutLogForm">
       <label class="log-field" for="logDate">Workout date</label>
       <input class="log-input" id="logDate" type="date" value="${esc(date)}" required>
@@ -128,19 +145,24 @@ function renderLog(){
     ${entryForm()}
     <div class="card"><h2>Workout history</h2>
       ${loading?'<p class="muted">Loading your workouts…</p>':
-        entries.length?entries.map(e=>`<div class="log-entry"><strong>${esc(pretty(e.id))}</strong> · ${e.completed===false?'Not completed':'Completed'}
+        entries.length?`${entries.slice(0,visibleCount).map(e=>`<div class="log-entry">
+          <div class="log-entry-title">${esc(workoutName(e.id))}</div>
+          <div class="log-entry-summary">${esc(pretty(e.id))} · ${e.completed===false?'Not completed':'Completed'}</div>
           ${e.result?`<p><strong>Result:</strong> ${esc(e.result)}</p>`:''}
           ${e.weights?`<p><strong>Weights:</strong> ${esc(e.weights)}</p>`:''}
           ${e.notes?`<p><strong>Notes:</strong> ${esc(e.notes)}</p>`:''}
-          <button class="btn secondary" data-log-edit="${esc(e.id)}">Edit</button>
-          <button class="btn secondary" data-log-delete="${esc(e.id)}">Delete</button></div>`).join(''):
+          <button class="btn secondary" data-log-edit="${esc(e.id)}">View / Edit</button>
+          <button class="btn secondary" data-log-delete="${esc(e.id)}">Delete</button></div>`).join('')}
+          ${entries.length>visibleCount?`<button class="btn secondary" id="logMore">Show 10 more</button>`:''}
+          <p class="muted" style="font-size:12px">Showing ${Math.min(entries.length,visibleCount)} of ${entries.length} saved workouts.</p>`:
         '<p class="muted">No workouts logged yet. Save your first workout above.</p>'}
     </div>`;
   document.querySelector('#logSignOut').onclick=async()=>{try{await signOut(auth)}catch(e){showStatus(errorText(e),true)}};
-  document.querySelector('#logClear').onclick=()=>{editingDate=null;status='';renderLog()};
+  document.querySelector('#logClear').onclick=()=>{editingDate=null;logDate=null;status='';renderLog()};
+  const more=document.querySelector('#logMore');if(more)more.onclick=()=>{visibleCount+=10;renderLog()};
   document.querySelector('#logDate').onchange=e=>{
     const match=entries.find(x=>x.id===e.target.value);
-    if(match){editingDate=match.id;renderLog()}else{editingDate=e.target.value}
+    logDate=e.target.value;editingDate=match?match.id:null;renderLog()
   };
   document.querySelector('#workoutLogForm').onsubmit=async e=>{
     e.preventDefault();
@@ -154,22 +176,36 @@ function renderLog(){
     const btn=document.querySelector('#logSave');btn.disabled=true;showStatus('Saving…');
     try{
       await setDoc(logDoc(date),{date,completed,result,weights,notes,updatedAt:serverTimestamp()});
-      editingDate=date;await fetchLogs();showStatus('Workout saved.');
+      editingDate=date;logDate=date;await fetchLogs();showStatus('Workout saved.');if(window.cityfitUpdateTodayLog)window.cityfitUpdateTodayLog();
     }catch(err){btn.disabled=false;showStatus(errorText(err),true)}
   };
-  document.querySelectorAll('[data-log-edit]').forEach(b=>b.onclick=()=>{editingDate=b.dataset.logEdit;status='';renderLog();window.scrollTo({top:0,behavior:'smooth'})});
+  document.querySelectorAll('[data-log-edit]').forEach(b=>b.onclick=()=>{editingDate=b.dataset.logEdit;logDate=editingDate;status='';renderLog();window.scrollTo({top:0,behavior:'smooth'})});
   document.querySelectorAll('[data-log-delete]').forEach(b=>b.onclick=async()=>{
     const date=b.dataset.logDelete;
     if(!confirm('Delete your workout log for '+pretty(date)+'? This cannot be undone.'))return;
     showStatus('Deleting…');
-    try{await deleteDoc(logDoc(date));if(editingDate===date)editingDate=null;await fetchLogs();showStatus('Workout deleted.')}
+    try{await deleteDoc(logDoc(date));if(editingDate===date)editingDate=null;await fetchLogs();showStatus('Workout deleted.');if(window.cityfitUpdateTodayLog)window.cityfitUpdateTodayLog()}
     catch(err){showStatus(errorText(err),true)}
   });
 }
 window.cityfitRenderLog=renderLog;
+window.cityfitUpdateTodayLog=()=>{
+  const holder=document.querySelector('#workoutLogLink');
+  if(!holder)return;
+  const date=selected;
+  if(!programFor(date)){holder.innerHTML='';return}
+  const logged=!!user&&entries.some(e=>e.id===date);
+  holder.innerHTML=`<div class="card"><div class="eyebrow">Your workout results</div>
+    <div class="logged-note">${!user?'Sign in to track your workout.':logged?'✓ Logged':'Not logged yet'}</div>
+    <button class="btn" id="logFromToday">${logged?'View / Edit My Results':'Log This Workout'} →</button></div>`;
+  document.querySelector('#logFromToday').onclick=()=>{
+    logDate=date;editingDate=logged?date:null;tab='log';render();
+  };
+};
 onAuthStateChanged(auth, next=>{
-  user=next;entries=[];editingDate=null;status='';statusError=false;
+  user=next;entries=[];editingDate=null;visibleCount=10;status='';statusError=false;
   if(logActive())renderLog();
+  if(window.cityfitUpdateTodayLog)window.cityfitUpdateTodayLog();
   if(user)fetchLogs();
 },e=>{user=null;showStatus(errorText(e),true);if(logActive())renderLog()});
 </script>
