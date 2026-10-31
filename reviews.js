@@ -42,10 +42,11 @@ function reviewMarkup(){
   const position = dates.indexOf(date);
   const dateNavigation = `<div class="card"><label class="review-label" for="review-date-picker">Scheduled workout</label><div class="log-actions"><button class="btn secondary" id="review-prev" ${position<=0?'disabled':''}>← Previous</button><button class="btn secondary" id="review-next" ${position<0||position>=dates.length-1?'disabled':''}>Next →</button></div><select class="log-input" id="review-date-picker">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(dateLabel(d))}</option>`).join('')}</select></div>`;
   const v = currentReview || defaultData;
+  const scheduleLive = window.cityfitWorkoutScheduleLive?.() === true;
   const canEdit = isReviewer();
   const readonly = currentReview && !canEdit;
   const adminPanel = role !== 'admin' ? '' : `<div class="card"><h2>Reviewer access</h2><p class="muted">Use the Firebase Authentication UID of an existing signed-in member. Never use an email address as the document ID.</p><form id="review-admin-form"><label class="review-label" for="review-role-uid">Firebase user UID</label><input class="log-input" id="review-role-uid" required maxlength="128" placeholder="Firebase Authentication UID"><label class="review-label" for="review-role-email">Email (reference only)</label><input class="log-input" id="review-role-email" type="email" required maxlength="254" placeholder="member@example.com"><label class="review-label" for="review-role-choice">Access level</label><select class="log-input" id="review-role-choice"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select><button class="btn" type="submit">Grant access</button></form><p class="muted" id="review-admin-status">${esc(adminStatus)}</p><div id="review-admin-list">${admins.map(a=>`<div class="log-entry"><strong>${esc(a.email)}</strong> · ${esc(a.role)}<div class="meta">${esc(a.uid)}</div><button class="btn secondary" data-revoke="${esc(a.uid)}" ${a.uid===currentUser?.uid?'disabled':''}>Revoke access</button></div>`).join('')}</div></div>`;
-  const form = !canEdit ? '' : `<form id="review-form">
+  const form = !canEdit ? '' : `${!scheduleLive ? '<p class="muted" role="alert">Live workout schedule is unavailable. Review submission is disabled to avoid saving feedback against sample workouts.</p>' : ''}<form id="review-form">
     <label class="review-label" for="review-rating">Overall workout quality</label>
     <select class="log-input" id="review-rating">${[1,2,3,4,5].map(n=>`<option value="${n}" ${n===v.rating?'selected':''}>${n} / 5 stars</option>`).join('')}</select>
     ${field('difficulty','Group difficulty',v.difficulty)}
@@ -54,7 +55,7 @@ function reviewMarkup(){
     ${field('recommendation','Recommendation for next year',v.recommendation)}
     <label class="review-label" for="review-comments">Comments (optional)</label>
     <textarea class="log-input" id="review-comments" maxlength="2000" rows="4" placeholder="What worked? What should change?">${esc(v.comments)}</textarea>
-    <div class="log-actions"><button class="btn" id="review-save" type="submit" ${busy?'disabled':''}>${currentReview?'Save changes':'Submit review'}</button></div>
+    <div class="log-actions"><button class="btn" id="review-save" type="submit" ${busy||!scheduleLive?'disabled':''}>${currentReview?'Save changes':'Submit review'}</button></div>
   </form>`;
   const display = currentReview ? `<div class="review-summary">
     <div><strong>Rating:</strong> ${esc(currentReview.rating)} / 5</div>
@@ -111,6 +112,7 @@ function render(){
   const form=document.querySelector('#review-form');
   if(form)form.onsubmit=async e=>{
     e.preventDefault();if(!currentUser||!isReviewer()||busy)return;
+    if(window.cityfitWorkoutScheduleLive?.() !== true){setStatus('Live workout schedule is unavailable. Review was not saved.');return;}
     const data={rating:Number(document.querySelector('#review-rating').value),
       difficulty:document.querySelector('#review-difficulty').value,
       duration:document.querySelector('#review-duration').value,
