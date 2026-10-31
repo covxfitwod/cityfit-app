@@ -75,7 +75,7 @@ function reviewMarkup(){
           <div class="meta">Rating ${esc(h.rating)} / 5 · ${esc(choices.recommendation.find(x=>x[0]===h.recommendation)?.[1]||h.recommendation)}</div>
           ${h.comments?`<p>${esc(h.comments)}</p>`:''}</div>`).join('') : '<p class="muted">No history yet.</p>'}</div>`}`;
 }
-async function refreshAdmins(){if(role!=='admin'||!currentUser)return;try{const result=await getDocs(collection(db,'reviewerPermissions'));admins=result.docs.map(d=>({...d.data(),uid:d.id})).sort((a,b)=>a.email.localeCompare(b.email));}catch(e){adminStatus=error(e);}if(window.cityfitReviewsActive?.())render();}
+async function refreshAdmins(){if(role!=='admin'||!currentUser)return;try{const result=await getDocs(collection(db,'reviewerPermissions'));admins=result.docs.map(d=>({...d.data(),uid:d.id})).sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));}catch(e){adminStatus=error(e);}if(window.cityfitReviewsActive?.())render();}
 async function refresh(){
   const context = workout(), ticket=++seq;
   if(!currentUser || !context.date || !context.focus){currentReview=null;history=[];if(window.cityfitReviewsActive?.())render();return;}
