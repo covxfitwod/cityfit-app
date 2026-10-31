@@ -2,7 +2,7 @@ import test, {before, after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initializeTestEnvironment, assertSucceeds, assertFails} from '@firebase/rules-unit-testing';
-import {doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, getDocs, collection} from 'firebase/firestore';
+import {doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, getDocs, collection, runTransaction} from 'firebase/firestore';
 
 let env;
 const projectId='demo-cityfit-security';
@@ -108,4 +108,28 @@ test('admin and reviewer editing permissions, immutable audit, and role revocati
   attempt.set(ref(revoked,'reviewHistory/'+reviewId+'_3'),historyDoc(uid.reviewer,3,{comments:'After revoke'}));
   await assertFails(attempt.commit());
   await assertSucceeds(getDoc(ref(revoked,'workoutReviews/'+reviewId)));
+});
+
+test('real review UI transaction: create and edit with matching audit history',async()=>{
+  await env.clearFirestore();await seed();
+  const db=as(uid.reviewer);
+  async function save(data,expected){
+    return runTransaction(db,async tx=>{
+      const review=ref(db,'workoutReviews/'+reviewId);
+      const snap=await tx.get(review);
+      const actual=snap.exists()?snap.data().revision:0;
+      if(actual!==expected)throw new Error('Another reviewer updated this workout.');
+      const revision=actual+1;
+      const update={...data,updatedBy:uid.reviewer,updatedAt:serverTimestamp(),revision};
+      if(!snap.exists())Object.assign(update,{date:reviewId,workoutTitle:'Pull/Push',workoutDescription:'Example',createdBy:uid.reviewer,createdAt:serverTimestamp()});
+      tx.set(review,update,{merge:!!snap.exists()});
+      tx.set(ref(db,'reviewHistory/'+reviewId+'_'+revision),{workoutId:reviewId,revision,editorUid:uid.reviewer,editedAt:serverTimestamp(),...data});
+    });
+  }
+  await assertSucceeds(save(values,0));
+  assert.equal((await getDoc(ref(db,'workoutReviews/'+reviewId))).data().revision,1);
+  await assertSucceeds(save({...values,comments:'Revised after workout'},1));
+  assert.equal((await getDoc(ref(db,'workoutReviews/'+reviewId))).data().revision,2);
+  assert.equal((await getDoc(ref(db,'reviewHistory/'+reviewId+'_2'))).data().comments,'Revised after workout');
+  await assert.rejects(save(values,1),/Another reviewer updated/);
 });
