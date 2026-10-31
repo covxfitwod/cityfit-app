@@ -2,7 +2,7 @@ import test, {before, after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initializeTestEnvironment, assertSucceeds, assertFails} from '@firebase/rules-unit-testing';
-import {doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp} from 'firebase/firestore';
+import {doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, getDocs, collection} from 'firebase/firestore';
 
 let env;
 const projectId='demo-cityfit-security';
