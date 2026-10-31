@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, getDocs, collection, runTransaction, serverTimestamp, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, getDocs, collection, runTransaction, serverTimestamp, query, where, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 
 const config = {
   apiKey: "AIzaSyBJ0b_22RLs1qwkxj8n9A9_EM0ZT3guytE",
@@ -19,7 +19,7 @@ const choices = {
   completion: [['nearly_all','Nearly everyone completed'],['most_scaled','Most completed with scaling'],['many_scaled','Many needed significant scaling']],
   recommendation: [['keep','Keep'],['progress','Progress'],['modify','Modify'],['replace','Replace']]
 };
-let currentUser = null, role = 'member', currentReview = null, history = [], state = '', busy = false, seq = 0;
+let currentUser = null, role = 'member', currentReview = null, history = [], state = '', busy = false, seq = 0, admins = [], adminStatus = '';
 const root = () => document.querySelector('#main');
 const workout = () => window.cityfitReviewContext?.() || {};
 const isReviewer = () => role === 'reviewer' || role === 'admin';
@@ -37,6 +37,7 @@ function reviewMarkup(){
   const v = currentReview || defaultData;
   const canEdit = isReviewer();
   const readonly = currentReview && !canEdit;
+  const adminPanel = role !== 'admin' ? '' : `<div class="card"><h2>Reviewer access</h2><p class="muted">Use the Firebase Authentication UID of an existing signed-in member. Never use an email address as the document ID.</p><form id="review-admin-form"><label class="review-label" for="review-role-uid">Firebase user UID</label><input class="log-input" id="review-role-uid" required maxlength="128" placeholder="Firebase Authentication UID"><label class="review-label" for="review-role-email">Email (reference only)</label><input class="log-input" id="review-role-email" type="email" required maxlength="254" placeholder="member@example.com"><label class="review-label" for="review-role-choice">Access level</label><select class="log-input" id="review-role-choice"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select><button class="btn" type="submit">Grant access</button></form><p class="muted" id="review-admin-status">${esc(adminStatus)}</p><div id="review-admin-list">${admins.map(a=>`<div class="log-entry"><strong>${esc(a.email)}</strong> · ${esc(a.role)}<div class="meta">${esc(a.uid)}</div><button class="btn secondary" data-revoke="${esc(a.uid)}" ${a.uid===currentUser?.uid?'disabled':''}>Revoke access</button></div>`).join('')}</div></div>`;
   const form = !canEdit ? '' : `<form id="review-form">
     <label class="review-label" for="review-rating">Overall workout quality</label>
     <select class="log-input" id="review-rating">${[1,2,3,4,5].map(n=>`<option value="${n}" ${n===v.rating?'selected':''}>${n} / 5 stars</option>`).join('')}</select>
@@ -63,10 +64,11 @@ function reviewMarkup(){
         <h2>Shared review</h2>${display}${form}
         ${readonly?'<p class="muted">Only authorized reviewers can edit shared feedback.</p>':''}
         <div id="review-status" class="log-status" role="status">${esc(state)}</div></div>
-        <div class="card"><h2>Edit history</h2>${history.length ? history.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
+        ${adminPanel}<div class="card"><h2>Edit history</h2>${history.length ? history.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
           <div class="meta">Rating ${esc(h.rating)} / 5 · ${esc(choices.recommendation.find(x=>x[0]===h.recommendation)?.[1]||h.recommendation)}</div>
           ${h.comments?`<p>${esc(h.comments)}</p>`:''}</div>`).join('') : '<p class="muted">No history yet.</p>'}</div>`}`;
 }
+async function refreshAdmins(){if(role!=='admin'||!currentUser)return;try{const result=await getDocs(collection(db,'reviewerPermissions'));admins=result.docs.map(d=>({...d.data(),uid:d.id})).sort((a,b)=>a.email.localeCompare(b.email));}catch(e){adminStatus=error(e);}if(window.cityfitReviewsActive?.())render();}
 async function refresh(){
   const context = workout(), ticket=++seq;
   if(!currentUser || !context.date || !context.focus){currentReview=null;history=[];if(window.cityfitReviewsActive?.())render();return;}
@@ -90,6 +92,9 @@ function render(){
   root().innerHTML=reviewMarkup();
   const signin=document.querySelector('#review-signin');
   if(signin)signin.onclick=async()=>{try{await setPersistence(auth,browserLocalPersistence);await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){setStatus(error(e));}};
+  const adminForm=document.querySelector('#review-admin-form');
+  if(adminForm)adminForm.onsubmit=async e=>{e.preventDefault();const uid=document.querySelector('#review-role-uid').value.trim();const email=document.querySelector('#review-role-email').value.trim();const newRole=document.querySelector('#review-role-choice').value;try{if(!/^[A-Za-z0-9]{15,128}$/.test(uid))throw new Error('Enter a valid Firebase Authentication UID.');await setDoc(doc(db,'reviewerPermissions',uid),{email,role:newRole});adminStatus='Access updated.';await refreshAdmins();}catch(err){adminStatus=error(err);render();}};
+  document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=async()=>{const uid=b.dataset.revoke;if(uid===currentUser?.uid)return;if(!confirm('Remove reviewer access for this account?'))return;try{await deleteDoc(doc(db,'reviewerPermissions',uid));adminStatus='Access revoked.';await refreshAdmins();}catch(err){adminStatus=error(err);render();}});
   const form=document.querySelector('#review-form');
   if(form)form.onsubmit=async e=>{
     e.preventDefault();if(!currentUser||!isReviewer()||busy)return;
@@ -121,7 +126,7 @@ function render(){
 onAuthStateChanged(auth,async u=>{
   currentUser=u;role='member';currentReview=null;history=[];seq++;
   if(u){try{const r=await getDoc(doc(db,'reviewerPermissions',u.uid));if(r.exists()&&['reviewer','admin'].includes(r.data().role))role=r.data().role;}catch(e){state=error(e);}}
-  if(window.cityfitReviewsActive?.()){render();await refresh();}
+  if(window.cityfitReviewsActive?.()){render();await refresh();if(role==='admin')await refreshAdmins();}
 });
 window.cityfitRenderReviews=render;
-window.cityfitLoadReviews=refresh;
+window.cityfitLoadReviews=async()=>{await refresh();if(role==='admin')await refreshAdmins();};
