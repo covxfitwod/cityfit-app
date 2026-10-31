@@ -22,7 +22,7 @@ service cloud.firestore {
 
     // Verify the audit snapshot matches the same atomic review write.
     function historyMatchesReview(workoutId, revision, review) {
-      let history = getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_' + revision)).data;
+      let history = getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_' + string(revision))).data;
       return history.workoutId == workoutId
         && history.revision == revision
         && history.editorUid == request.auth.uid
@@ -117,7 +117,7 @@ service cloud.firestore {
         && request.resource.data.workoutId is string
         && request.resource.data.revision is int
         && request.resource.data.revision >= 1
-        && historyId == request.resource.data.workoutId + '_' + request.resource.data.revision
+        && historyId == request.resource.data.workoutId + '_' + string(request.resource.data.revision)
         && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.revision == request.resource.data.revision
         && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.updatedBy == request.auth.uid
         && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.updatedAt == request.time
