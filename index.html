@@ -38,6 +38,7 @@ function renderReviews(){if(window.cityfitRenderReviews){window.cityfitRenderRev
  function renderLog(){if(window.cityfitRenderLog){window.cityfitRenderLog();return;}$('#main').innerHTML='<div class="card"><h2>Loading personal workout log…</h2></div>'};
 window.cityfitReviewsActive=()=>tab==='reviews';
 window.cityfitReviewContext=()=>({date:selected,focus:workouts[selected]?.focus||'',description:workouts[selected]?.description||''});
+window.cityfitWorkoutScheduleLive=()=>live;
 window.cityfitReviewDates=()=>Object.keys(workouts).filter(k=>k>=START&&k<=END).sort();
 window.cityfitReviewSelectDate=date=>{if(!workouts[date])return;selected=date;month=date.slice(0,7);render();if(tab==='reviews'&&window.cityfitLoadReviews)window.cityfitLoadReviews();};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();if(tab==='reviews'&&window.cityfitLoadReviews)window.cityfitLoadReviews()});
