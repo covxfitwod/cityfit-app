@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:rules": "firebase emulators:exec --only firestore --project demo-cityfit-security 'node --test tests/firestore-rules.test.mjs'"
+    "test:rules": "firebase emulators:exec --only firestore --project demo-cityfit-security 'node --test tests/firestore-rules.test.mjs'",
+    "test:browser": "node tests/browser-smoke.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",
     "firebase": "^11.10.0",
-    "firebase-tools": "^14.0.0"
+    "firebase-tools": "^14.0.0",
+    "@playwright/test": "^1.56.0"
   }
 }
