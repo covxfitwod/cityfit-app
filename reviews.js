@@ -34,6 +34,9 @@ const reviewRef = date => doc(db,'workoutReviews',date);
 function setStatus(msg){state=msg;const el=document.querySelector('#review-status');if(el)el.textContent=msg;}
 function reviewMarkup(){
   const {date,focus,description} = workout();
+  const dates = window.cityfitReviewDates?.() || [];
+  const position = dates.indexOf(date);
+  const dateNavigation = `<div class="card"><label class="review-label" for="review-date-picker">Scheduled workout</label><div class="log-actions"><button class="btn secondary" id="review-prev" ${position<=0?'disabled':''}>← Previous</button><button class="btn secondary" id="review-next" ${position<0||position>=dates.length-1?'disabled':''}>Next →</button></div><select class="log-input" id="review-date-picker">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(dateLabel(d))}</option>`).join('')}</select></div>`;
   const v = currentReview || defaultData;
   const canEdit = isReviewer();
   const readonly = currentReview && !canEdit;
@@ -56,7 +59,7 @@ function reviewMarkup(){
     <p class="muted">Revision ${esc(currentReview.revision)} · Updated ${esc(stamp(currentReview.updatedAt))}</p>
   </div>` : '<p class="muted">No review has been submitted for this workout yet.</p>';
   return `<div class="eyebrow">Shared programming feedback</div><h1>Workout Reviews</h1>
-    <div class="card"><div class="meta">${esc(dateLabel(date))}</div><h2>${esc(focus||'Workout')}</h2>
+    ${dateNavigation}<div class="card"><div class="meta">${esc(dateLabel(date))}</div><h2>${esc(focus||'Workout')}</h2>
       <div class="prescribed">${esc(description||'')}</div>
     </div>
     ${!currentUser ? `<div class="card"><h2>Sign in to view reviews</h2><p class="muted">All signed-in CityFit members can read reviews. Only approved reviewers can edit them.</p><button class="btn" id="review-signin">Sign in with Google</button></div>`
@@ -90,6 +93,12 @@ function render(){
   const context=workout();
   if(!context.focus){root().innerHTML='<div class="card"><h2>No scheduled workout</h2><p>Choose a programmed date from Today or Calendar to view its review.</p></div>';return;}
   root().innerHTML=reviewMarkup();
+  const datePicker=document.querySelector('#review-date-picker');
+  if(datePicker)datePicker.onchange=()=>window.cityfitReviewSelectDate?.(datePicker.value);
+  const dates=window.cityfitReviewDates?.()||[],position=dates.indexOf(context.date);
+  const prev=document.querySelector('#review-prev'),next=document.querySelector('#review-next');
+  if(prev)prev.onclick=()=>window.cityfitReviewSelectDate?.(dates[position-1]);
+  if(next)next.onclick=()=>window.cityfitReviewSelectDate?.(dates[position+1]);
   const signin=document.querySelector('#review-signin');
   if(signin)signin.onclick=async()=>{try{await setPersistence(auth,browserLocalPersistence);await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){setStatus(error(e));}};
   const adminForm=document.querySelector('#review-admin-form');
