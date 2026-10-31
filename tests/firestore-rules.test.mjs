@@ -78,3 +78,34 @@ test('audit: rejects mismatched history and permits matching revision 2',async()
   await assertSucceeds(good.commit());
   await assertFails(deleteDoc(ref(as(uid.reviewer),'reviewHistory/'+reviewId+'_1')));
 });
+
+test('authenticated member can read review history, but cannot write or list roles',async()=>{
+  await env.clearFirestore();await seed();
+  const db=as(uid.reviewer),batch=writeBatch(db);
+  batch.set(ref(db,'workoutReviews/'+reviewId),reviewDoc());
+  batch.set(ref(db,'reviewHistory/'+reviewId+'_1'),historyDoc());
+  await assertSucceeds(batch.commit());
+  await assertSucceeds(getDocs(collection(as(uid.member),'reviewHistory')));
+  await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(),'reviewHistory')));
+  await assertFails(getDocs(collection(as(uid.member),'reviewerPermissions')));
+  await assertFails(setDoc(ref(as(uid.member),'reviewHistory/'+reviewId+'_2'),historyDoc(uid.member,2)));
+  await assertFails(deleteDoc(ref(as(uid.member),'workoutReviews/'+reviewId)));
+});
+test('admin and reviewer editing permissions, immutable audit, and role revocation',async()=>{
+  await env.clearFirestore();await seed();
+  const db=as(uid.reviewer),first=writeBatch(db);
+  first.set(ref(db,'workoutReviews/'+reviewId),reviewDoc());
+  first.set(ref(db,'reviewHistory/'+reviewId+'_1'),historyDoc());
+  await assertSucceeds(first.commit());
+  const adminDb=as(uid.admin),edit=writeBatch(adminDb);
+  edit.update(ref(adminDb,'workoutReviews/'+reviewId),{comments:'Admin edit',revision:2,updatedBy:uid.admin,updatedAt:serverTimestamp()});
+  edit.set(ref(adminDb,'reviewHistory/'+reviewId+'_2'),historyDoc(uid.admin,2,{comments:'Admin edit'}));
+  await assertSucceeds(edit.commit());
+  await assertFails(updateDoc(ref(adminDb,'reviewHistory/'+reviewId+'_1'),{comments:'Tampered'}));
+  await assertSucceeds(deleteDoc(ref(adminDb,'reviewerPermissions/'+uid.reviewer)));
+  const revoked=as(uid.reviewer),attempt=writeBatch(revoked);
+  attempt.update(ref(revoked,'workoutReviews/'+reviewId),{comments:'After revoke',revision:3,updatedBy:uid.reviewer,updatedAt:serverTimestamp()});
+  attempt.set(ref(revoked,'reviewHistory/'+reviewId+'_3'),historyDoc(uid.reviewer,3,{comments:'After revoke'}));
+  await assertFails(attempt.commit());
+  await assertSucceeds(getDoc(ref(revoked,'workoutReviews/'+reviewId)));
+});
