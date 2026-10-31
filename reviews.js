@@ -10,7 +10,11 @@ const config = {
   messagingSenderId: "307788439314",
   appId: "1:307788439314:web:8b77fb855b8d7986e19dcb"
 };
-const app = getApps()[0] || initializeApp(config);
+const selectedConfig = window.CITYFIT_FIREBASE_CONFIG || config;
+if (window.CITYFIT_TEST_MODE && (!window.CITYFIT_FIREBASE_CONFIG || selectedConfig.projectId === 'cityfit-workout-app')) {
+  throw new Error('Test mode requires a separate Firebase project. Production Firebase is blocked.');
+}
+const app = getApps()[0] || initializeApp(selectedConfig);
 const auth = getAuth(app), db = getFirestore(app);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const choices = {
