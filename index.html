@@ -59,7 +59,11 @@ const firebaseConfig = {
   messagingSenderId: "307788439314",
   appId: "1:307788439314:web:8b77fb855b8d7986e19dcb"
 };
-const app = initializeApp(firebaseConfig);
+const selectedFirebaseConfig = window.CITYFIT_FIREBASE_CONFIG || firebaseConfig;
+if (window.CITYFIT_TEST_MODE && (!window.CITYFIT_FIREBASE_CONFIG || selectedFirebaseConfig.projectId === 'cityfit-workout-app')) {
+  throw new Error('Test mode requires a separate Firebase project. Production Firebase is blocked.');
+}
+const app = initializeApp(selectedFirebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
