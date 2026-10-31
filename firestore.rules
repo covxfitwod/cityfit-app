@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function rolePath(uid) {
+      return /databases/$(database)/documents/reviewerPermissions/$(uid);
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && get(rolePath(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isReviewer() {
+      return signedIn()
+        && get(rolePath(request.auth.uid)).data.role in ['reviewer', 'admin'];
+    }
+
+    // Existing private workout log permissions: unchanged.
+    match /users/{userId}/workouts/{workoutId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // One shared review per scheduled workout (document ID YYYY-MM-DD).
+    match /workoutReviews/{workoutId} {
+      allow read: if signedIn();
+      allow create: if isReviewer()
+        && request.resource.data.keys().hasOnly([
+          'date', 'workoutTitle', 'workoutDescription', 'rating',
+          'difficulty', 'duration', 'completion', 'recommendation',
+          'comments', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt',
+          'revision'
+        ])
+        && request.resource.data.date == workoutId
+        && workoutId.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.difficulty in ['too_easy', 'about_right', 'too_difficult']
+        && request.resource.data.duration in ['quicker', 'as_expected', 'longer']
+        && request.resource.data.completion in ['nearly_all', 'most_scaled', 'many_scaled']
+        && request.resource.data.recommendation in ['keep', 'progress', 'modify', 'replace']
+        && request.resource.data.comments is string
+        && request.resource.data.comments.size() <= 2000
+        && request.resource.data.workoutTitle is string
+        && request.resource.data.workoutTitle.size() <= 200
+        && request.resource.data.workoutDescription is string
+        && request.resource.data.workoutDescription.size() <= 5000
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.revision == 1;
+      allow update: if isReviewer()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'rating', 'difficulty', 'duration', 'completion',
+          'recommendation', 'comments', 'updatedBy', 'updatedAt', 'revision'
+        ])
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.difficulty in ['too_easy', 'about_right', 'too_difficult']
+        && request.resource.data.duration in ['quicker', 'as_expected', 'longer']
+        && request.resource.data.completion in ['nearly_all', 'most_scaled', 'many_scaled']
+        && request.resource.data.recommendation in ['keep', 'progress', 'modify', 'replace']
+        && request.resource.data.comments is string
+        && request.resource.data.comments.size() <= 2000
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if isAdmin();
+    }
+
+    // Role assignments. No client may bootstrap its own admin role.
+    match /reviewerPermissions/{userId} {
+      allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['role', 'email'])
+        && request.resource.data.role in ['reviewer', 'admin']
+        && request.resource.data.email is string;
+      allow delete: if isAdmin();
+    }
+
+    // Review history is append-only and readable by signed-in members.
+    match /reviewHistory/{historyId} {
+      allow read: if signedIn();
+      allow create: if isReviewer()
+        && request.resource.data.keys().hasOnly([
+          'workoutId', 'revision', 'editorUid', 'editedAt',
+          'rating', 'difficulty', 'duration', 'completion',
+          'recommendation', 'comments'
+        ])
+        && request.resource.data.editorUid == request.auth.uid
+        && request.resource.data.editedAt == request.time
+        && request.resource.data.workoutId is string
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && historyId == request.resource.data.workoutId + '_' + request.resource.data.revision;
+      allow update, delete: if false;
+    }
+  }
+}
