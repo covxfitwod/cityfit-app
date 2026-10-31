@@ -54,7 +54,8 @@ service cloud.firestore {
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
-        && request.resource.data.revision == 1;
+        && request.resource.data.revision == 1
+        && getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_1')).data.editorUid == request.auth.uid;
       allow update: if isReviewer()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'rating', 'difficulty', 'duration', 'completion',
@@ -71,7 +72,8 @@ service cloud.firestore {
         && request.resource.data.comments.size() <= 2000
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
-        && request.resource.data.revision == resource.data.revision + 1;
+        && request.resource.data.revision == resource.data.revision + 1
+        && getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_' + request.resource.data.revision)).data.editorUid == request.auth.uid;
       allow delete: if isAdmin();
     }
 
@@ -100,7 +102,9 @@ service cloud.firestore {
         && request.resource.data.workoutId is string
         && request.resource.data.revision is int
         && request.resource.data.revision >= 1
-        && historyId == request.resource.data.workoutId + '_' + request.resource.data.revision;
+        && historyId == request.resource.data.workoutId + '_' + request.resource.data.revision
+        && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.revision == request.resource.data.revision
+        && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.updatedBy == request.auth.uid;
       allow update, delete: if false;
     }
   }
