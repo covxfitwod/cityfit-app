@@ -20,6 +20,21 @@ service cloud.firestore {
         && get(rolePath(request.auth.uid)).data.role in ['reviewer', 'admin'];
     }
 
+    // Verify the audit snapshot matches the same atomic review write.
+    function historyMatchesReview(workoutId, revision, review) {
+      let history = getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_' + revision)).data;
+      return history.workoutId == workoutId
+        && history.revision == revision
+        && history.editorUid == request.auth.uid
+        && history.editedAt == request.time
+        && history.rating == review.rating
+        && history.difficulty == review.difficulty
+        && history.duration == review.duration
+        && history.completion == review.completion
+        && history.recommendation == review.recommendation
+        && history.comments == review.comments;
+    }
+
     // Existing private workout log permissions: unchanged.
     match /users/{userId}/workouts/{workoutId} {
       allow read, write: if signedIn() && request.auth.uid == userId;
@@ -55,7 +70,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
         && request.resource.data.revision == 1
-        && getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_1')).data.editorUid == request.auth.uid;
+        && historyMatchesReview(workoutId, 1, request.resource.data);
       allow update: if isReviewer()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'rating', 'difficulty', 'duration', 'completion',
@@ -73,7 +88,7 @@ service cloud.firestore {
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && request.resource.data.revision == resource.data.revision + 1
-        && getAfter(/databases/$(database)/documents/reviewHistory/$(workoutId + '_' + request.resource.data.revision)).data.editorUid == request.auth.uid;
+        && historyMatchesReview(workoutId, request.resource.data.revision, request.resource.data);
       allow delete: if isAdmin();
     }
 
@@ -104,7 +119,14 @@ service cloud.firestore {
         && request.resource.data.revision >= 1
         && historyId == request.resource.data.workoutId + '_' + request.resource.data.revision
         && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.revision == request.resource.data.revision
-        && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.updatedBy == request.auth.uid;
+        && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.updatedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.updatedAt == request.time
+        && request.resource.data.rating == getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.rating
+        && request.resource.data.difficulty == getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.difficulty
+        && request.resource.data.duration == getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.duration
+        && request.resource.data.completion == getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.completion
+        && request.resource.data.recommendation == getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.recommendation
+        && request.resource.data.comments == getAfter(/databases/$(database)/documents/workoutReviews/$(request.resource.data.workoutId)).data.comments;
       allow update, delete: if false;
     }
   }
