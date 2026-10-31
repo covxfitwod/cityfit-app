@@ -25,6 +25,7 @@ try {
    await page.getByRole('button',{name:'Sign in with Google'}).waitFor();
    assert.equal(await page.locator('#review-form').count(),0,'Review form must be hidden when signed out');
    assert.equal(await page.locator('#review-admin-form').count(),0,'Admin controls must be hidden when signed out');
+   assert.equal(await page.evaluate(()=>window.cityfitWorkoutScheduleLive?.()),false,'Fallback schedule should not be considered live');
    const options=await page.locator('#review-date-picker option').count();
    assert.ok(options>=2,'Expected at least two scheduled workouts');
    assert.equal(await page.getByRole('button',{name:/Previous/}).isDisabled(),true);
