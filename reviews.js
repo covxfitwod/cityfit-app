@@ -70,7 +70,7 @@ function reviewMarkup(){
     ${dateNavigation}<div class="card"><div class="meta">${esc(dateLabel(date))}</div><h2>${esc(focus||'Workout')}</h2>
       <div class="prescribed">${esc(description||'')}</div>
     </div>
-    <div class="card"><h2>Edit history</h2>${visibleHistory.length ? visibleHistory.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
+    <div class="card"><h2>Review History</h2>${visibleHistory.length ? visibleHistory.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
           <div class="meta">Rating ${esc(h.rating)} / 5 · ${esc(choices.recommendation.find(x=>x[0]===h.recommendation)?.[1]||h.recommendation)}</div>
           ${h.comments?`<p>${esc(h.comments)}</p>`:''}</div>`).join('') : '<p class="muted">No history yet.</p>'}</div>
     <div class="card">${currentUser ? `<div class="meta">Signed in as ${esc(currentUser.email||'Google user')} · ${esc(role)}</div>` : `<p class="muted">Reviews are public. Sign in only if you are an approved reviewer.</p><button class="btn secondary" id="review-signin">Reviewer sign-in with Google</button>`}
