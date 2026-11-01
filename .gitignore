@@ -1,0 +1,4 @@
+
+# Local-only Firebase test configuration and generated preview
+test-firebase-config.json
+test-preview-build/
