@@ -23,7 +23,7 @@ const choices = {
   completion: [['nearly_all','Nearly everyone completed'],['most_scaled','Most completed with scaling'],['many_scaled','Many needed significant scaling']],
   recommendation: [['keep','Keep'],['progress','Progress'],['modify','Modify'],['replace','Replace']]
 };
-let currentUser = null, role = 'member', currentReview = null, history = [], state = '', busy = false, seq = 0, admins = [], adminStatus = '';
+let currentUser = null, role = 'member', currentReview = null, history = [], loadedDate = null, state = '', busy = false, seq = 0, admins = [], adminStatus = '';
 const root = () => document.querySelector('#main');
 const workout = () => window.cityfitReviewContext?.() || {};
 const isReviewer = () => role === 'reviewer' || role === 'admin';
@@ -41,10 +41,13 @@ function reviewMarkup(){
   const dates = window.cityfitReviewDates?.() || [];
   const position = dates.indexOf(date);
   const dateNavigation = `<div class="card"><label class="review-label" for="review-date-picker">Scheduled workout</label><div class="log-actions" style="margin-bottom:14px"><button class="btn secondary" id="review-prev" ${position<=0?'disabled':''}>← Previous</button><button class="btn secondary" id="review-next" ${position<0||position>=dates.length-1?'disabled':''}>Next →</button></div><select class="log-input" id="review-date-picker">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(dateLabel(d))}</option>`).join('')}</select></div>`;
-  const v = currentReview || defaultData;
+  const matchingDate = loadedDate === date;
+  const visibleReview = matchingDate ? currentReview : null;
+  const visibleHistory = matchingDate ? history : [];
+  const v = visibleReview || defaultData;
   const scheduleLive = window.cityfitWorkoutScheduleLive?.() === true;
   const canEdit = isReviewer();
-  const readonly = currentReview && !canEdit;
+  const readonly = visibleReview && !canEdit;
   const adminPanel = role !== 'admin' ? '' : `<div class="card"><h2>Reviewer access</h2><p class="muted">Use the Firebase Authentication UID of an existing signed-in member. Never use an email address as the document ID.</p><form id="review-admin-form"><label class="review-label" for="review-role-uid">Firebase user UID</label><input class="log-input" id="review-role-uid" required maxlength="128" placeholder="Firebase Authentication UID"><label class="review-label" for="review-role-email">Email (reference only)</label><input class="log-input" id="review-role-email" type="email" required maxlength="254" placeholder="member@example.com"><label class="review-label" for="review-role-choice">Access level</label><select class="log-input" id="review-role-choice"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select><button class="btn" type="submit">Grant access</button></form><p class="muted" id="review-admin-status">${esc(adminStatus)}</p><div id="review-admin-list">${admins.map(a=>`<div class="log-entry"><strong>${esc(a.email)}</strong> · ${esc(a.role)}<div class="meta">${esc(a.uid)}</div><button class="btn secondary" data-revoke="${esc(a.uid)}" ${a.uid===currentUser?.uid?'disabled':''}>Revoke access</button></div>`).join('')}</div></div>`;
   const form = !canEdit ? '' : `${!scheduleLive ? '<p class="muted" role="alert">Live workout schedule is unavailable. Review submission is disabled to avoid saving feedback against sample workouts.</p>' : ''}<form id="review-form">
     <label class="review-label" for="review-rating">Overall workout quality</label>
@@ -57,17 +60,17 @@ function reviewMarkup(){
     <textarea class="log-input" id="review-comments" maxlength="2000" rows="4" placeholder="What worked? What should change?">${esc(v.comments)}</textarea>
     <div class="log-actions"><button class="btn" id="review-save" type="submit" ${busy||!scheduleLive?'disabled':''}>${currentReview?'Save changes':'Submit review'}</button></div>
   </form>`;
-  const display = currentReview ? `<div class="review-summary">
-    <div><strong>Rating:</strong> ${esc(currentReview.rating)} / 5</div>
-    ${Object.keys(choices).map(k=>`<div><strong>${esc(({difficulty:'Difficulty',duration:'Duration',completion:'Group performance',recommendation:'Next year'})[k])}:</strong> ${esc(choices[k].find(x=>x[0]===currentReview[k])?.[1] || currentReview[k])}</div>`).join('')}
-    ${currentReview.comments?`<p class="prescribed">${esc(currentReview.comments)}</p>`:''}
-    <p class="muted">Revision ${esc(currentReview.revision)} · Updated ${esc(stamp(currentReview.updatedAt))}</p>
+  const display = visibleReview ? `<div class="review-summary">
+    <div><strong>Rating:</strong> ${esc(visibleReview.rating)} / 5</div>
+    ${Object.keys(choices).map(k=>`<div><strong>${esc(({difficulty:'Difficulty',duration:'Duration',completion:'Group performance',recommendation:'Next year'})[k])}:</strong> ${esc(choices[k].find(x=>x[0]===visibleReview[k])?.[1] || visibleReview[k])}</div>`).join('')}
+    ${visibleReview.comments?`<p class="prescribed">${esc(visibleReview.comments)}</p>`:''}
+    <p class="muted">Revision ${esc(visibleReview.revision)} · Updated ${esc(stamp(visibleReview.updatedAt))}</p>
   </div>` : '<p class="muted">No review has been submitted for this workout yet.</p>';
   return `<div class="eyebrow">Shared programming feedback</div><h1>Workout Reviews</h1>
     ${dateNavigation}<div class="card"><div class="meta">${esc(dateLabel(date))}</div><h2>${esc(focus||'Workout')}</h2>
       <div class="prescribed">${esc(description||'')}</div>
     </div>
-    <div class="card"><h2>Edit history</h2>${history.length ? history.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
+    <div class="card"><h2>Edit history</h2>${visibleHistory.length ? visibleHistory.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
           <div class="meta">Rating ${esc(h.rating)} / 5 · ${esc(choices.recommendation.find(x=>x[0]===h.recommendation)?.[1]||h.recommendation)}</div>
           ${h.comments?`<p>${esc(h.comments)}</p>`:''}</div>`).join('') : '<p class="muted">No history yet.</p>'}</div>
     <div class="card">${currentUser ? `<div class="meta">Signed in as ${esc(currentUser.email||'Google user')} · ${esc(role)}</div>` : `<p class="muted">Reviews are public. Sign in only if you are an approved reviewer.</p><button class="btn secondary" id="review-signin">Reviewer sign-in with Google</button>`}
@@ -79,7 +82,8 @@ function reviewMarkup(){
 async function refreshAdmins(){if(role!=='admin'||!currentUser)return;try{const result=await getDocs(collection(db,'reviewerPermissions'));admins=result.docs.map(d=>({...d.data(),uid:d.id})).sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));}catch(e){adminStatus=error(e);}if(window.cityfitReviewsActive?.())render();}
 async function refresh(){
   const context = workout(), ticket=++seq;
-  if(!context.date || !context.focus){currentReview=null;history=[];if(window.cityfitReviewsActive?.())render();return;}
+  if(!context.date || !context.focus){currentReview=null;history=[];loadedDate=null;if(window.cityfitReviewsActive?.())render();return;}
+  currentReview=null;history=[];loadedDate=null;
   state='Loading review…';if(window.cityfitReviewsActive?.())render();
   try {
     const [r,h] = await Promise.all([
@@ -88,9 +92,10 @@ async function refresh(){
     ]);
     if(ticket!==seq)return;
     currentReview=r.exists()?r.data():null;
-    history=h.docs.map(d=>d.data()).sort((a,b)=>b.revision-a.revision);
+    history=h.docs.map(d=>d.data()).filter(h=>h.workoutId===context.date).sort((a,b)=>b.revision-a.revision);
+    loadedDate=context.date;
     state='';
-  }catch(e){if(ticket===seq){currentReview=null;history=[];state=error(e);}}
+  }catch(e){if(ticket===seq){currentReview=null;history=[];loadedDate=null;state=error(e);}}
   if(window.cityfitReviewsActive?.())render();
 }
 function render(){
@@ -139,7 +144,7 @@ function render(){
   };
 }
 onAuthStateChanged(auth,async u=>{
-  currentUser=u;role='member';currentReview=null;history=[];seq++;
+  currentUser=u;role='member';currentReview=null;history=[];loadedDate=null;seq++;
   if(u){try{const r=await getDoc(doc(db,'reviewerPermissions',u.uid));if(r.exists()&&['reviewer','admin'].includes(r.data().role))role=r.data().role;}catch(e){state=error(e);}}
   if(window.cityfitReviewsActive?.()){render();await refresh();if(role==='admin')await refreshAdmins();}
 });
