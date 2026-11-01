@@ -24,8 +24,8 @@ try {
    await page.getByLabel('Scheduled workout').waitFor();
    await page.getByRole('button',{name:'Reviewer sign-in with Google'}).waitFor();
    await page.getByRole('heading',{name:'Shared review'}).waitFor();
-   await page.getByRole('heading',{name:'Edit history'}).waitFor();
-   const historyAboveReview=await page.evaluate(()=>document.querySelector('#main').innerHTML.indexOf('<h2>Edit history</h2>')<document.querySelector('#main').innerHTML.indexOf('<h2>Shared review</h2>'));
+   await page.getByRole('heading',{name:'Review History'}).waitFor();
+   const historyAboveReview=await page.evaluate(()=>document.querySelector('#main').innerHTML.indexOf('<h2>Review History</h2>')<document.querySelector('#main').innerHTML.indexOf('<h2>Shared review</h2>'));
    assert.equal(historyAboveReview,true,'History should appear below workout description and before review');
    assert.equal(await page.locator('#review-form').count(),0,'Review form must be hidden when signed out');
    assert.equal(await page.locator('#review-admin-form').count(),0,'Admin controls must be hidden when signed out');
