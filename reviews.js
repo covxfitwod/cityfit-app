@@ -74,7 +74,7 @@ function reviewMarkup(){
         <h2>Shared review</h2>${display}${form}
         ${readonly?'<p class="muted">Only authorized reviewers can edit shared feedback.</p>':''}
         <div id="review-status" class="log-status" role="status">${esc(state)}</div></div>
-        ${adminPanel}`}`;
+        ${adminPanel}`;
 }
 async function refreshAdmins(){if(role!=='admin'||!currentUser)return;try{const result=await getDocs(collection(db,'reviewerPermissions'));admins=result.docs.map(d=>({...d.data(),uid:d.id})).sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));}catch(e){adminStatus=error(e);}if(window.cityfitReviewsActive?.())render();}
 async function refresh(){
