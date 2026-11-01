@@ -42,8 +42,8 @@ function reviewMarkup(){
   const position = dates.indexOf(date);
   const dateNavigation = `<div class="card"><label class="review-label" for="review-date-picker">Scheduled workout</label><div class="log-actions" style="margin-bottom:14px"><button class="btn secondary" id="review-prev" ${position<=0?'disabled':''}>← Previous</button><button class="btn secondary" id="review-next" ${position<0||position>=dates.length-1?'disabled':''}>Next →</button></div><select class="log-input" id="review-date-picker">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(dateLabel(d))}</option>`).join('')}</select></div>`;
   const matchingDate = loadedDate === date;
-  const visibleReview = matchingDate ? currentReview : null;
-  const visibleHistory = matchingDate ? history : [];
+  const visibleReview = matchingDate && currentReview?.date === date ? currentReview : null;
+  const visibleHistory = matchingDate ? history.filter(h=>h.workoutId === date) : [];
   const v = visibleReview || defaultData;
   const scheduleLive = window.cityfitWorkoutScheduleLive?.() === true;
   const canEdit = isReviewer();
@@ -91,7 +91,7 @@ async function refresh(){
       getDocs(query(collection(db,'reviewHistory'),where('workoutId','==',context.date)))
     ]);
     if(ticket!==seq)return;
-    currentReview=r.exists()?r.data():null;
+    currentReview=r.exists() && r.data().date === context.date ? r.data() : null;
     history=h.docs.map(d=>d.data()).filter(h=>h.workoutId===context.date).sort((a,b)=>b.revision-a.revision);
     loadedDate=context.date;
     state='';
