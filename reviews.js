@@ -40,7 +40,7 @@ function reviewMarkup(){
   const {date,focus,description} = workout();
   const dates = window.cityfitReviewDates?.() || [];
   const position = dates.indexOf(date);
-  const dateNavigation = `<div class="card"><label class="review-label" for="review-date-picker">Scheduled workout</label><div class="log-actions"><button class="btn secondary" id="review-prev" ${position<=0?'disabled':''}>← Previous</button><button class="btn secondary" id="review-next" ${position<0||position>=dates.length-1?'disabled':''}>Next →</button></div><select class="log-input" id="review-date-picker">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(dateLabel(d))}</option>`).join('')}</select></div>`;
+  const dateNavigation = `<div class="card"><label class="review-label" for="review-date-picker">Scheduled workout</label><div class="log-actions" style="margin-bottom:14px"><button class="btn secondary" id="review-prev" ${position<=0?'disabled':''}>← Previous</button><button class="btn secondary" id="review-next" ${position<0||position>=dates.length-1?'disabled':''}>Next →</button></div><select class="log-input" id="review-date-picker">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(dateLabel(d))}</option>`).join('')}</select></div>`;
   const v = currentReview || defaultData;
   const scheduleLive = window.cityfitWorkoutScheduleLive?.() === true;
   const canEdit = isReviewer();
@@ -67,19 +67,19 @@ function reviewMarkup(){
     ${dateNavigation}<div class="card"><div class="meta">${esc(dateLabel(date))}</div><h2>${esc(focus||'Workout')}</h2>
       <div class="prescribed">${esc(description||'')}</div>
     </div>
-    ${!currentUser ? `<div class="card"><h2>Sign in to view reviews</h2><p class="muted">All signed-in CityFit members can read reviews. Only approved reviewers can edit them.</p><button class="btn" id="review-signin">Sign in with Google</button></div>`
-      : `<div class="card"><div class="meta">Signed in as ${esc(currentUser.email||'Google user')} · ${esc(role)}</div>
+    <div class="card"><h2>Edit history</h2>${history.length ? history.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
+          <div class="meta">Rating ${esc(h.rating)} / 5 · ${esc(choices.recommendation.find(x=>x[0]===h.recommendation)?.[1]||h.recommendation)}</div>
+          ${h.comments?`<p>${esc(h.comments)}</p>`:''}</div>`).join('') : '<p class="muted">No history yet.</p>'}</div>
+    <div class="card">${currentUser ? `<div class="meta">Signed in as ${esc(currentUser.email||'Google user')} · ${esc(role)}</div>` : `<p class="muted">Reviews are public. Sign in only if you are an approved reviewer.</p><button class="btn secondary" id="review-signin">Reviewer sign-in with Google</button>`}
         <h2>Shared review</h2>${display}${form}
         ${readonly?'<p class="muted">Only authorized reviewers can edit shared feedback.</p>':''}
         <div id="review-status" class="log-status" role="status">${esc(state)}</div></div>
-        ${adminPanel}<div class="card"><h2>Edit history</h2>${history.length ? history.map(h=>`<div class="log-entry"><strong>Revision ${esc(h.revision)}</strong> · ${esc(stamp(h.editedAt))}
-          <div class="meta">Rating ${esc(h.rating)} / 5 · ${esc(choices.recommendation.find(x=>x[0]===h.recommendation)?.[1]||h.recommendation)}</div>
-          ${h.comments?`<p>${esc(h.comments)}</p>`:''}</div>`).join('') : '<p class="muted">No history yet.</p>'}</div>`}`;
+        ${adminPanel}`}`;
 }
 async function refreshAdmins(){if(role!=='admin'||!currentUser)return;try{const result=await getDocs(collection(db,'reviewerPermissions'));admins=result.docs.map(d=>({...d.data(),uid:d.id})).sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));}catch(e){adminStatus=error(e);}if(window.cityfitReviewsActive?.())render();}
 async function refresh(){
   const context = workout(), ticket=++seq;
-  if(!currentUser || !context.date || !context.focus){currentReview=null;history=[];if(window.cityfitReviewsActive?.())render();return;}
+  if(!context.date || !context.focus){currentReview=null;history=[];if(window.cityfitReviewsActive?.())render();return;}
   state='Loading review…';if(window.cityfitReviewsActive?.())render();
   try {
     const [r,h] = await Promise.all([
