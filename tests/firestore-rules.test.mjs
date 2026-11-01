@@ -134,3 +134,44 @@ test('real review UI transaction: create and edit with matching audit history',a
   assert.equal((await getDoc(ref(db,'reviewHistory/'+reviewId+'_2'))).data().comments,'Revised after workout');
   await assert.rejects(save(values,1),/Another reviewer updated/);
 });
+
+test('review creation, revision, and date isolation across two workouts',async()=>{
+  await env.clearFirestore();await seed();
+  const db=as(uid.reviewer);
+  const firstDate='2026-11-02', secondDate='2026-12-25';
+  async function save(date,comments,expected){
+    return runTransaction(db,async tx=>{
+      const review=ref(db,'workoutReviews/'+date);
+      const snap=await tx.get(review);
+      const actual=snap.exists()?snap.data().revision:0;
+      if(actual!==expected)throw new Error('Stale review revision');
+      const revision=actual+1;
+      const data={...values,comments};
+      const update={...data,updatedBy:uid.reviewer,updatedAt:serverTimestamp(),revision};
+      if(!snap.exists())Object.assign(update,{
+        date,workoutTitle:date===firstDate?'Pull/Push':'Holiday workout',
+        workoutDescription:'Scheduled '+date,
+        createdBy:uid.reviewer,createdAt:serverTimestamp()
+      });
+      tx.set(review,update,{merge:snap.exists()});
+      tx.set(ref(db,'reviewHistory/'+date+'_'+revision),{
+        workoutId:date,revision,editorUid:uid.reviewer,editedAt:serverTimestamp(),...data
+      });
+    });
+  }
+  await assertSucceeds(save(secondDate,'December test',0));
+  await assertSucceeds(save(secondDate,'December revised',1));
+  const december=await getDoc(ref(db,'workoutReviews/'+secondDate));
+  assert.equal(december.data().date,secondDate);
+  assert.equal(december.data().revision,2);
+  assert.equal(december.data().comments,'December revised');
+  assert.equal((await getDoc(ref(db,'workoutReviews/'+firstDate))).exists(),false);
+  assert.equal((await getDoc(ref(db,'reviewHistory/'+firstDate+'_1'))).exists(),false);
+  const revisions=await getDocs(collection(db,'reviewHistory'));
+  assert.deepEqual(revisions.docs.map(d=>d.data().workoutId),[secondDate,secondDate]);
+  await assertSucceeds(save(firstDate,'November review',0));
+  assert.equal((await getDoc(ref(db,'workoutReviews/'+firstDate))).data().revision,1);
+  assert.equal((await getDoc(ref(db,'workoutReviews/'+secondDate))).data().revision,2);
+  await assert.rejects(save(secondDate,'Stale attempt',1),/Stale review revision/);
+  await assertFails(setDoc(ref(as(uid.member),'workoutReviews/'+firstDate),reviewDoc(uid.member)));
+});

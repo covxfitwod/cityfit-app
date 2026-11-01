@@ -34,10 +34,17 @@ try {
    assert.ok(options>=2,'Expected at least two scheduled workouts');
    assert.equal(await page.getByRole('button',{name:/Previous/}).isDisabled(),true);
    const originalDate=await page.locator('#review-date-picker').inputValue();
+   if(name==='mobile'){
+     const padding=await page.locator('.shell').evaluate(el=>parseFloat(getComputedStyle(el).paddingTop));
+     assert.ok(padding>=24 && padding<65,'Mobile header should retain safe-area spacing without excessive padding');
+   }
+   assert.equal(await page.locator('#main .review-summary').count(),0,'No unrelated review should appear on initial date');
    await page.getByRole('button',{name:/Next/}).click();
    await page.getByRole('heading',{name:'Workout Reviews'}).waitFor();
    const nextDate=await page.locator('#review-date-picker').inputValue();
    assert.notEqual(nextDate,originalDate,'Next must change selected workout');
+   assert.equal(await page.locator('#main .review-summary').count(),0,'Previous date review must not carry into next date');
+   assert.equal(await page.locator('#main .log-entry').count(),0,'Previous date history must not carry into next date');
    await page.getByRole('button',{name:/Previous/}).click();
    assert.equal(await page.locator('#review-date-picker').inputValue(),originalDate,'Previous must restore original workout');
    await page.locator('#review-date-picker').selectOption(nextDate);
