@@ -42,7 +42,7 @@ service cloud.firestore {
 
     // One shared review per scheduled workout (document ID YYYY-MM-DD).
     match /workoutReviews/{workoutId} {
-      allow read: if signedIn();
+      allow read: if true;
       allow create: if isReviewer()
         && request.resource.data.keys().hasOnly([
           'date', 'workoutTitle', 'workoutDescription', 'rating',
@@ -105,7 +105,7 @@ service cloud.firestore {
 
     // Review history is append-only and readable by signed-in members.
     match /reviewHistory/{historyId} {
-      allow read: if signedIn();
+      allow read: if true;
       allow create: if isReviewer()
         && request.resource.data.keys().hasOnly([
           'workoutId', 'revision', 'editorUid', 'editedAt',

@@ -50,9 +50,10 @@ test('role assignment: member cannot self-promote; admin can grant and revoke',a
 });
 test('shared review: authenticated read, reviewer atomic create, member cannot create',async()=>{
   await env.clearFirestore();await seed();
-  await assertFails(getDoc(ref(env.unauthenticatedContext().firestore(),'workoutReviews/'+reviewId)));
+  await assertSucceeds(getDoc(ref(env.unauthenticatedContext().firestore(),'workoutReviews/'+reviewId)));
   await assertSucceeds(getDoc(ref(as(uid.member),'workoutReviews/'+reviewId)));
   await assertFails(setDoc(ref(as(uid.member),'workoutReviews/'+reviewId),reviewDoc(uid.member)));
+  await assertFails(setDoc(ref(env.unauthenticatedContext().firestore(),'workoutReviews/'+reviewId),reviewDoc(uid.member)));
   await assertFails(setDoc(ref(as(uid.reviewer),'workoutReviews/'+reviewId),reviewDoc()));
   const db=as(uid.reviewer),batch=writeBatch(db);
   batch.set(ref(db,'workoutReviews/'+reviewId),reviewDoc());
@@ -86,7 +87,7 @@ test('authenticated member can read review history, but cannot write or list rol
   batch.set(ref(db,'reviewHistory/'+reviewId+'_1'),historyDoc());
   await assertSucceeds(batch.commit());
   await assertSucceeds(getDocs(collection(as(uid.member),'reviewHistory')));
-  await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(),'reviewHistory')));
+  await assertSucceeds(getDocs(collection(env.unauthenticatedContext().firestore(),'reviewHistory')));
   await assertFails(getDocs(collection(as(uid.member),'reviewerPermissions')));
   await assertFails(setDoc(ref(as(uid.member),'reviewHistory/'+reviewId+'_2'),historyDoc(uid.member,2)));
   await assertFails(deleteDoc(ref(as(uid.member),'workoutReviews/'+reviewId)));
