@@ -95,12 +95,8 @@ service cloud.firestore {
     // Role assignments. No client may bootstrap its own admin role.
     match /reviewerPermissions/{userId} {
       allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow list: if isAdmin();
-      allow create, update: if isAdmin()
-        && request.resource.data.keys().hasOnly(['role', 'email'])
-        && request.resource.data.role in ['reviewer', 'admin']
-        && request.resource.data.email is string;
-      allow delete: if isAdmin();
+      // Role assignments are managed through Firebase Console only.
+      allow list, create, update, delete: if false;
     }
 
     // Review history is append-only and readable by signed-in members.

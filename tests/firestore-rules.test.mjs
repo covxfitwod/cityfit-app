@@ -40,13 +40,13 @@ test('private logs: only owner can read and write',async()=>{
   await assertSucceeds(setDoc(ref(as(uid.member),'users/'+uid.member+'/workouts/new'),{notes:'Mine'}));
   await assertFails(setDoc(ref(as(uid.reviewer),'users/'+uid.member+'/workouts/new'),{notes:'Intrusion'}));
 });
-test('role assignment: member cannot self-promote; admin can grant and revoke',async()=>{
+test('role assignment: no browser client can grant or revoke access',async()=>{
   await env.clearFirestore();await seed();
   await assertFails(setDoc(ref(as(uid.member),'reviewerPermissions/'+uid.member),{role:'admin',email:'member@example.com'}));
   await assertFails(getDoc(ref(as(uid.member),'reviewerPermissions/'+uid.admin)));
   await assertSucceeds(getDoc(ref(as(uid.member),'reviewerPermissions/'+uid.member)));
-  await assertSucceeds(setDoc(ref(as(uid.admin),'reviewerPermissions/'+uid.other),{role:'reviewer',email:'other@example.com'}));
-  await assertSucceeds(deleteDoc(ref(as(uid.admin),'reviewerPermissions/'+uid.other)));
+  await assertFails(setDoc(ref(as(uid.admin),'reviewerPermissions/'+uid.other),{role:'reviewer',email:'other@example.com'}));
+  await assertFails(deleteDoc(ref(as(uid.admin),'reviewerPermissions/'+uid.reviewer)));
 });
 test('shared review: authenticated read, reviewer atomic create, member cannot create',async()=>{
   await env.clearFirestore();await seed();
@@ -103,7 +103,11 @@ test('admin and reviewer editing permissions, immutable audit, and role revocati
   edit.set(ref(adminDb,'reviewHistory/'+reviewId+'_2'),historyDoc(uid.admin,2,{comments:'Admin edit'}));
   await assertSucceeds(edit.commit());
   await assertFails(updateDoc(ref(adminDb,'reviewHistory/'+reviewId+'_1'),{comments:'Tampered'}));
-  await assertSucceeds(deleteDoc(ref(adminDb,'reviewerPermissions/'+uid.reviewer)));
+  await assertFails(deleteDoc(ref(adminDb,'reviewerPermissions/'+uid.reviewer)));
+  // Simulate revocation performed in Firebase Console using privileged access.
+  await env.withSecurityRulesDisabled(async ctx => {
+    await deleteDoc(ref(ctx.firestore(),'reviewerPermissions/'+uid.reviewer));
+  });
   const revoked=as(uid.reviewer),attempt=writeBatch(revoked);
   attempt.update(ref(revoked,'workoutReviews/'+reviewId),{comments:'After revoke',revision:3,updatedBy:uid.reviewer,updatedAt:serverTimestamp()});
   attempt.set(ref(revoked,'reviewHistory/'+reviewId+'_3'),historyDoc(uid.reviewer,3,{comments:'After revoke'}));
